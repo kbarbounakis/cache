@@ -320,6 +320,9 @@ class OutputCaching {
                 // do nothing (no-cache)
                 return next();
             }
+            if (req.get('Cache-Control') === 'no-cache') {
+                return next();
+            }
             (async () => {
                 return await new OutputCachingMapper(cachingOptions).map(req);
             })().then((value) => {

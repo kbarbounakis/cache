@@ -3,7 +3,7 @@ import { TraceUtils, LangUtils } from '@themost/common';
 import { QueryExpression } from '@themost/query';
 import { DiskCacheReader } from './DiskCacheReader';
 import { IndexedCache } from './IndexedCache';
-import { CacheEntry } from './models/CacheEntry';
+import { CacheEntry } from './models';
 
 class IndexedCacheStrategy extends DataCacheStrategy {
 
@@ -26,7 +26,7 @@ class IndexedCacheStrategy extends DataCacheStrategy {
     rawCache
 
     /**
-     * @param {import('@themost/common').ConfigurationBase}
+     * @param {import('@themost/common').ConfigurationBase} configuration
      */
     constructor(configuration) {
         super(configuration);
@@ -61,7 +61,7 @@ class IndexedCacheStrategy extends DataCacheStrategy {
 
     async onCheck() {
         /**
-         * @type {import('./IndexedCache').IndexedCache}
+         * @type {import('@themost/data').DataContext}
          */
          let context;
          try {
@@ -73,7 +73,7 @@ class IndexedCacheStrategy extends DataCacheStrategy {
                          doomed: true
                      }
                  ).where('expiredAt').lowerOrEqual(new Date())
-             );
+             , null);
              const items = await context.model(CacheEntry).where('doomed').equal(true).select('id').getItems();
              if (items.length) {
                  for (const item of items) {
@@ -117,7 +117,8 @@ class IndexedCacheStrategy extends DataCacheStrategy {
             // set default content encoding
             const contentEncoding = (value instanceof Buffer) ? 'application/octet-stream': 'application/json';
             entry.contentEncoding = entry.contentEncoding || contentEncoding;
-            await context.model(CacheEntry).subscribeOnce('after.save', async (event) => {
+            const CacheEntries = context.model(CacheEntry).silent();
+            await CacheEntries.subscribeOnce('after.save', async (event) => {
                 if (event.state !== 1) {
                     return;
                 }
@@ -172,11 +173,12 @@ class IndexedCacheStrategy extends DataCacheStrategy {
                     doomed: false
                  });
              }
+             const CacheEntries = context.model(CacheEntry).silent();
              /**
               * get entry
               * @type {CacheEntry}
               */
-             const item = await context.model(CacheEntry).find(entry).getTypedItem();
+             const item = await CacheEntries.find(entry).getTypedItem();
              if (item == null) {
                 return null;
              }
@@ -219,15 +221,16 @@ class IndexedCacheStrategy extends DataCacheStrategy {
              } else {
                  entry = Object.assign({}, key);
              }
+             const CacheEntries = context.model(CacheEntry).silent();
              /**
               * get entry
               * @type {CacheEntry}
               */
-             const item = await context.model(CacheEntry).find(entry).getItem();
+             const item = await CacheEntries.find(entry).getItem();
              if (item == null) {
                 return;
              }
-             await context.model(CacheEntry).remove(item); 
+             await CacheEntries.remove(item);
          } finally {
              if (context) {
                  await context.finalizeAsync();
@@ -261,7 +264,8 @@ class IndexedCacheStrategy extends DataCacheStrategy {
                     doomed: false
                 });
             }
-            return await context.model(CacheEntry).find(entry).getTypedItem();
+            const CacheEntries = context.model(CacheEntry).silent();
+            return await CacheEntries.find(entry).getTypedItem();
          }  finally {
             if (context) {
                 await context.finalizeAsync();
@@ -281,7 +285,7 @@ class IndexedCacheStrategy extends DataCacheStrategy {
     }
 
     /**
-     * @param {string|CompositeKey} key 
+     * @param {string|import('@themost/cache').CompositeCacheKey} key
      * @returns Promise<import('@themost/cache').CacheEntry>
      */
     async find(key) {

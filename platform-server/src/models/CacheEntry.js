@@ -49,7 +49,9 @@ class CacheEntry extends DataObject {
      * @type {number}
      */
     @Id()
-    @Formula(() => Guid.newGuid().toString())
+    @ColumnDefault(() => {
+        return Guid.newGuid().toString();
+    })
     @Column({
         length: 36,
         type: 'Guid'
