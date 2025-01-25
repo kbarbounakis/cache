@@ -6,6 +6,8 @@ const CacheEntrySchema = {
     "abstract": false,
     "hidden": true,
     "caching": "none",
+    "source": "CacheEntry",
+    "view": "CacheEntry",
     "fields": [
         {
             "name": "id",
@@ -132,6 +134,17 @@ const CacheEntrySchema = {
                 "params",
                 "customParams"
             ]
+        }
+    ],
+    "privileges": [
+        {
+            "mask": 15,
+            "type": "global"
+        },
+        {
+            "mask": 15,
+            "type": "global",
+            "account": "Administrators"
         }
     ]
 }

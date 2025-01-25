@@ -1,6 +1,5 @@
 const NodeCache = require('node-cache');
 import { DataCacheStrategy } from '@themost/cache';
-import { LangUtils } from '@themost/common';
 
 const CACHE_ABSOLUTE_EXPIRATION = 1200;
 
@@ -10,8 +9,8 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
     constructor(configuration) {
         super(configuration);
         this.absoluteExpiration = CACHE_ABSOLUTE_EXPIRATION;
-        const absoluteExpiration = LangUtils.parseInt(configuration.getSourceAt('settings/cache/absoluteExpiration'));
-        if (absoluteExpiration>0) {
+        const absoluteExpiration = configuration.getSourceAt('settings/cache/absoluteExpiration');
+        if (typeof absoluteExpiration === 'number' && absoluteExpiration > 0) {
             this.absoluteExpiration = absoluteExpiration;
         }
         this.rawCache = new NodeCache({

@@ -1,5 +1,5 @@
-
 module.exports = {
+    retainlines: true,
     presets: [
         [
             '@babel/preset-env',
