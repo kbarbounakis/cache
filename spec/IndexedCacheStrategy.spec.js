@@ -26,6 +26,7 @@ describe('IndexedCachedStrategy', () => {
          * @type {IndexedCacheStrategy|*}
          */
         caching = app.getConfiguration().getStrategy(DataCacheStrategy);
+        //const cacheEntry = caching.rawCache.configuration.getStrategy(SchemaLoaderStrategy).getModelDefinition('CacheEntry');
         context = app.createContext();
 
         function onAfterSaveOrRemove(event, callback) {

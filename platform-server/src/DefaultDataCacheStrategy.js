@@ -24,9 +24,23 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @param {string|CompositeCacheKey} key
      * @returns {Promise<any>}
      */
-    async get(key) {
-        // noinspection JSCheckFunctionSignatures
-        return this.rawCache.get(key);
+    get(key) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                void self.rawCache.get(key, function(err, res) {
+                    if (err) {
+                        return reject(err);
+                    }
+                    if (Object.prototype.hasOwnProperty.call(res, key)) {
+                        return resolve(res[key]);
+                    }
+                    return resolve();
+                });
+            } catch (err) {
+                return reject(err);
+            }
+        });
     }
     
     /**
@@ -38,8 +52,19 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @returns {Promise<void>}
      */
     async add(key, value, absoluteExpiration) {
-        // noinspection JSCheckFunctionSignatures
-        this.rawCache.set(key, value, absoluteExpiration);
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                void self.rawCache.set(key, value, absoluteExpiration, (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve();
+                });
+            } catch (err) {
+                return reject(err);
+            }
+        });
     }
     /**
      * Removes a cached value.
@@ -64,14 +89,13 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
 
     async has(key) {
         // noinspection JSCheckFunctionSignatures
-        const exists = this.rawCache.has(key);
-        if (exists) {
-            // noinspection JSValidateTypes
-            return {
-                path: key
-            }
+        const exists = await this.rawCache.get(key);
+        if (typeof exists === 'undefined') {
+            return;
         }
-        return null;
+        return {
+            path: key
+        }
     }
 
     /**
@@ -92,10 +116,11 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @returns {Promise<void>}
      */
     finalize() {
-        return this.clear().then(() => {
-            // destroy timer
-            if (this.rawCache && typeof this.rawCache._killCheckPeriod === 'function') {
-                this.rawCache._killCheckPeriod();
+        var self = this;
+        return self.clear().then(function() {
+            if (self.rawCache.checkTimeout != null) {
+                clearTimeout(self.rawCache.checkTimeout);
+                return Promise.resolve();
             }
         });
     }
