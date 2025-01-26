@@ -1,5 +1,4 @@
 module.exports = {
-    retainlines: true,
     presets: [
         [
             '@babel/preset-env',
@@ -15,9 +14,6 @@ module.exports = {
             '@babel/plugin-proposal-decorators', {
                 "legacy": true
             }
-        ],
-        [
-            '@babel/plugin-proposal-class-properties'
         ]
     ]
 };

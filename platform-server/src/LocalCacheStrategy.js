@@ -144,8 +144,27 @@ class LocalCacheStrategy extends DataCacheStrategy {
     }
 
     /**
+     * 
+     * @param {string|import('@themost/cache').CompositeCacheKey} entryKeyOrCompositeKey 
+     * @returns {import('@themost/cache').CacheItem}
+     */
+    fromKeyOrCompositeKey(entryKeyOrCompositeKey) {
+        if (typeof entryKeyOrCompositeKey === 'string') {
+            return {
+                path: entryKeyOrCompositeKey,
+                location: 'server',
+                contentEncoding: 'application/json'
+            }
+        }
+        return Object.assign({
+            location: 'server',
+            contentEncoding: 'application/json'
+        }, entryKeyOrCompositeKey);
+    }
+
+    /**
      * Gets a key value pair from cache
-     * @param {*} key 
+     * @param {string|import('@themost/cache').CompositeCacheKey} key 
      * @returns Promise<*>
      */
     async get(key) {
@@ -153,38 +172,27 @@ class LocalCacheStrategy extends DataCacheStrategy {
         const CacheEntry = new QueryEntity('CacheEntry');
         try {
             await this.tryInitializeAsync(context);
-            const [entry] = await context.db.executeAsync(
-                new QueryExpression().select(({id, content, doomed, expiredAt}) => {
-                    return {
-                        id,
-                        content,
-                        doomed,
-                        expiredAt
-                    }
-                }).from(CacheEntry).where((x, key) => {
-                    return x.path === key && x.location === 'server';
-                }, key)
-            );
-            if (entry && entry.doomed) {
-                // execute ad-hoc query
+            const id = this.generateIdentifier(key);
+            const query = new QueryExpression().select(({id, content, doomed, expiredAt}) => {
+                return {
+                    id,
+                    content,
+                    doomed,
+                    expiredAt
+                }
+            }).from(CacheEntry).where((x, id) => {
+                return x.id == id;
+            }, id);
+            let [entry] = await context.db.executeAsync(query);
+            const expired = (entry && entry.doomed) || (entry && entry.expiredAt && entry.expiredAt < new Date());
+            if (expired) {
                 // remove doomed entry
                 await context.db.executeAsync(
-                    new QueryExpression().delete().from(CacheEntry).where((x, id) => {
+                    new QueryExpression().delete(CacheEntry).where((x, id) => {
                         return x.id === id;
-                    }, entry.id)
+                    }, id)
                 );
-                return;
-            }
-            if (entry && entry.expiredAt && entry.expiredAt < new Date()) {
-                // execute ad-hoc query
-                // set doomed to true
-                await context.db.executeAsync(
-                    new QueryExpression().update(CacheEntry).set({
-                        doomed: true
-                    }).where((x, id) => {
-                        return x.id === id;
-                    }, entry.id)
-                );
+                entry = null;
             }
             if (entry && entry.content) {
                 return JSON.parse(entry.content);
@@ -197,7 +205,7 @@ class LocalCacheStrategy extends DataCacheStrategy {
 
     /**
      * Sets a key value pair in cache.
-     * @param {*} key - The key to be cached
+     * @param {string|import('@themost/cache').CompositeCacheKey} key - The key to be cached
      * @param {*} value - The value to be cached
      * @param {number=} absoluteExpiration - The expiration time in seconds
      * @returns {Promise<*>}
@@ -207,16 +215,7 @@ class LocalCacheStrategy extends DataCacheStrategy {
         const {source: CacheEntry} = CacheEntrySchema;
         try {
             await this.tryInitializeAsync(context);
-            // create uuid from unique constraint attributes
-            // (avoid checking if exists)
-            const entry = {
-                path: key,
-                location: 'server',
-                contentEncoding: 'application/json',
-                headers: null,
-                params: null,
-                customParams: null
-            }
+            const entry = this.fromKeyOrCompositeKey(key);
             // get id
             const id = Guid.from(entry).toString();
             // assign extra properties
@@ -225,32 +224,37 @@ class LocalCacheStrategy extends DataCacheStrategy {
                 content: JSON.stringify(value), // serialize value
                 createdAt: new Date(),
                 modifiedAt: new Date(),
+                duration: absoluteExpiration,
                 expiredAt: absoluteExpiration ? new Date(Date.now() + ((absoluteExpiration || 0) * 1000)) : null,
                 doomed: false
             });
-            const exists = await context.db.executeAsync(
-                new QueryExpression().select(({id}) => {
+            let [existing] = await context.db.executeAsync(
+                new QueryExpression().select(({id, doomed, expiredAt}) => {
                     return {
-                        id
+                        id,
+                        doomed,
+                        expiredAt
                     }
                 }).from(CacheEntry).where((x, id) => {
                     return x.id === id;
                 }, id)
             );
-            if (exists.length === 0) {    
+            const expired = (existing && existing.doomed) || (existing && existing.expiredAt && existing.expiredAt < new Date());
+            if (expired) {
+                // remove doomed entry
+                await context.db.executeAsync(
+                    new QueryExpression().delete(CacheEntry).where((x, id) => {
+                        return x.id === id;
+                    }, id)
+                );
+                existing = null;
+            }
+            if (existing == null) {    
                 // insert or update cache entry
                 await context.db.executeAsync(
                     new QueryExpression().insert(entry).into(CacheEntry)
                 );
-            } else {
-                // insert or update cache entry
-                await context.db.executeAsync(
-                    new QueryExpression().update(CacheEntry).set(entry).where((x, id) => {
-                        return x.id === id;
-                    }, id)
-                );
             }
-            return entry;
         } finally {
             await context.finalizeAsync();
         }
@@ -258,7 +262,7 @@ class LocalCacheStrategy extends DataCacheStrategy {
 
     /**
      * Removes a key from cache
-     * @param {*} key 
+     * @param {string|import('@themost/cache').CompositeCacheKey} key 
      */
     async remove(key) {
         const context = new LocalCacheContext(this);
@@ -278,12 +282,23 @@ class LocalCacheStrategy extends DataCacheStrategy {
     }
 
     async clear() {
-        throw new Error('Method not implemented.');
+        const context = new LocalCacheContext(this);
+        const {source: CacheEntry} = CacheEntrySchema;
+        try {
+            await this.tryInitializeAsync(context);
+            await context.db.executeAsync(
+                new QueryExpression().delete(CacheEntry).where((x) => {
+                    return x.id != null;
+                })
+            );
+        } finally {
+            await context.finalizeAsync();
+        }
     }
 
     finalize(callback) {
         if (typeof callback !== 'function') {
-            return;
+            return Promise.resolve();
         }
         // do nothing
         return callback();
@@ -296,28 +311,6 @@ class LocalCacheStrategy extends DataCacheStrategy {
         });
     }
 
-    /**
-     * Gets a key value pair from cache or invokes the given function and returns the value before caching it.
-     * @param {*} key 
-     * @param {function():Promise<*>} getFunc The function to be invoked if the key is not found in cache
-     * @param {number=} absoluteExpiration The expiration time in seconds
-     * @returns 
-     */
-    async getOrDefault(key, getFunc, absoluteExpiration) {
-        // try to get entry from cache
-        const value = await this.get(key);
-        // if entry exists
-        if (typeof value !== 'undefined') {
-            // return value
-            return value;
-        }
-        // otherwise, get value by invoking function
-        const result = await getFunc();
-        // add value to cache
-        await this.add(key, typeof result === 'undefined' ? null : result, absoluteExpiration);
-        // return value
-        return result;
-    }
 }
 
 export { 

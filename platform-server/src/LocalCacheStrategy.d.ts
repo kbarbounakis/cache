@@ -10,6 +10,7 @@ export declare class LocalCacheStrategy extends DataCacheStrategy {
     has(key: string | CompositeCacheKey): Promise<CompositeCacheKey>;
     getOrDefault(key: string | CompositeCacheKey, getFunc: GetItemFunction, absoluteExpiration?: number): Promise<any>;
     finalize(): Promise<void>;
+    finalizeAsync(): Promise<void>;
 }
 
 export declare interface LocalCacheAdapter extends DataAdapterBase, DataAdapterBaseHelper {

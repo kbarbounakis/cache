@@ -2,7 +2,14 @@ import {ConfigurationBase, ConfigurationStrategy} from "@themost/common";
 
 export declare type GetItemFunction = () => Promise<any>;
 
-export declare type CompositeCacheKey = any;
+export declare interface CompositeCacheKey {
+    path?: string,
+    location?: 'server' | 'client' | 'serverAndClient',
+    contentEncoding?: string,
+    headers?: any,
+    params?: any,
+    customParams?: any,
+}
 
 export declare interface DataCacheStrategyBase {
     add(key: string | CompositeCacheKey, value: any, absoluteExpiration?: number): Promise<any>;
@@ -24,6 +31,7 @@ export declare abstract class DataCacheStrategy extends ConfigurationStrategy im
     abstract get(key: string | CompositeCacheKey): Promise<any>;
     abstract has(key: string | CompositeCacheKey): Promise<CompositeCacheKey>;
     getOrDefault(key: string | CompositeCacheKey, getFunc: GetItemFunction, absoluteExpiration?: number): Promise<any>;
+    generateIdentifier(key: string|CompositeCacheKey): string;
 
 }
 

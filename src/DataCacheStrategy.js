@@ -1,8 +1,33 @@
 import {ConfigurationStrategy, AbstractMethodError, AbstractClassError} from '@themost/common';
-
+import { Guid } from '@themost/common';
+import MD5 from 'crypto-js/md5';
+if (typeof Guid.from !== 'function') {
+    Guid.from = function(value) {
+        var str = MD5(value).toString();
+        return new Guid([
+            str.substring(0, 8),
+            str.substring(8, 12),
+            str.substring(12, 16),
+            str.substring(16, 20),
+            str.substring(20, 32)
+        ].join('-'));
+    }
+}
 /**
  * @interface CompositeCacheKey
  */
+
+/**
+ * Composite key properties
+ */
+const CompositeKeyProperties = [
+    'path',
+    'location',
+    'contentEncoding',
+    'headers',
+    'params',
+    'customParams'
+]
 
 class DataCacheStrategy extends ConfigurationStrategy {
     constructor(configuration) {
@@ -80,20 +105,55 @@ class DataCacheStrategy extends ConfigurationStrategy {
     */
 
     /**
-     * Gets data from cache or executes the given function and adds the result to cache
-     * @param {string|CompositeCacheKey} key 
-     * @param {function():GetItemFunction} getFunc
-     * @param {number=} absoluteExpiration 
+     * Gets a key value pair from cache or invokes the given function and returns the value before caching it.
+     * @param {string|import('./DataCacheStrategy').CompositeCacheKey} key 
+     * @param {function():Promise<*>} getFunc The function to be invoked if the key is not found in cache
+     * @param {number=} absoluteExpiration The expiration time in seconds
+     * @returns 
      */
-    async getOrDefault(key, getFunc, absoluteExpiration) {
-        let item = await this.get(key);
-        if (item == null) {
-            item = await getFunc();
-            if (item != null) {
-                await this.add(key, item, absoluteExpiration);
+    async getOrDefault(keyOrCompositeKey, getFunc, absoluteExpiration) {
+        let value = await this.get(keyOrCompositeKey);
+        if (typeof value === 'undefined') {
+            value = await getFunc();
+            if (typeof value === 'undefined') {
+                // set value to null
+                value = null;
             }
+            // add value to cache
+            await this.add(keyOrCompositeKey, value, absoluteExpiration);
         }
-        return item;
+        // return value
+        return value;
+    }
+
+    /**
+     * 
+     * @param {string|import('./DataCacheStrategy').CompositeCacheKey} entryKeyOrCompositeKey 
+     * @returns {string}
+     */
+    generateIdentifier(entryKeyOrCompositeKey) {
+        let entry;
+        if (typeof entryKeyOrCompositeKey === 'string') {
+            entry = {
+                path: entryKeyOrCompositeKey,
+                location: 'server',
+                contentEncoding: 'application/json'
+            }
+        } else {
+            entry = Object.assign({
+                location: 'server',
+                contentEncoding: 'application/json'
+            }, entryKeyOrCompositeKey);
+        }
+        const key = CompositeKeyProperties.reduce((result, field) => {
+            if (Object.prototype.hasOwnProperty.call(entry, field)) {
+                result[field] = entry[field];
+            } else {
+                result[field] = null;
+            }
+            return result;
+        }, {});
+        return Guid.from(key).toString();
     }
 
 }

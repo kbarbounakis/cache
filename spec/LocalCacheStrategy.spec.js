@@ -21,11 +21,12 @@ describe('LocalCacheStrategy', () => {
         await cache.add('cache-item-key', {
             id: 1001
         });
-        const item = await cache.get('cache-item-key');
+        let item = await cache.get('cache-item-key');
         expect(item).toEqual({
             id: 1001
         });
         await cache.finalizeAsync();
+
     });
 
     it('should remove item', async () => {
@@ -56,6 +57,19 @@ describe('LocalCacheStrategy', () => {
         expect(item).toEqual({
             id: 1001
         });
+        await cache.finalizeAsync();
+    });
+
+    it('should clear items', async () => {
+        const cache = new LocalCacheStrategy(new ConfigurationBase('.'));
+        await cache.getOrDefault('cache-item-key', async () => {
+            return {
+                id: 1001
+            }
+        });
+        await cache.clear();
+        let item = await cache.get('cache-item-key');
+        expect(item).toBeUndefined();
         await cache.finalizeAsync();
     });
 });
