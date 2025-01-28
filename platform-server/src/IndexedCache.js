@@ -26,51 +26,9 @@ class IndexedCache extends DataApplication {
      */
     constructor(containerConfiguration) {
         super(IndexedCache.DefaultRootDir);
-        // set jspa imports
-        this.configuration.setSourceAt('settings/jspa/imports', [
-            path.resolve(__dirname, './models/index')
-        ]);
-        // set jspa loader
-        this.configuration.setSourceAt('settings/schema/loaders', [
-            {
-                loaderType: '@themost/jspa/platform-server#DefaultEntityLoaderStrategy'
-            }
-        ]);
-        // add default adapter type
-        this.configuration.setSourceAt('adapterTypes', [
-            {
-                name: 'Sqlite Data Adapter',
-                invariantName: 'sqlite',
-                type: '@themost/sqlite'
-            },
-            {
-                name: 'Connection Pool',
-                invariantName: 'pool',
-                type: '@themost/pool'
-            }
-        ]);
         const rootDir = containerConfiguration.getSourceAt('settings/cache/rootDir') || IndexedCache.DefaultRootDir;
         const finalRootDir = path.resolve(process.cwd(), rootDir);
         mkdirp.sync(finalRootDir);
-        this.configuration.setSourceAt('adapters', [
-            {
-                name: 'cache',
-                default: false,
-                invariantName: 'sqlite',
-                options: {
-                    database: path.resolve(finalRootDir, 'index.db')
-                }
-            },
-            {
-                name: 'cache+pool',
-                default: true,
-                invariantName: 'pool',
-                options: {
-                    adapter: 'cache',
-                    max: 1,
-                }
-            }
-        ]);
         // reload schema
         this.configuration.useStrategy(SchemaLoaderStrategy, DefaultSchemaLoaderStrategy);
         // reload configuration

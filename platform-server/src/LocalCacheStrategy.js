@@ -1,7 +1,7 @@
 import { Guid, TraceUtils } from '@themost/common';
 import MD5 from 'crypto-js/md5';
 import { DataCacheReaderWriter, DataCacheStrategy } from '@themost/cache';
-import { QueryEntity, QueryExpression } from '@themost/query';
+import { QueryEntity, QueryExpression, QueryField } from '@themost/query';
 import genericPool from '@themost/pool';
 import { createInstance } from '@themost/sqlite';
 import path from 'path';
@@ -322,7 +322,12 @@ class LocalCacheStrategy extends DataCacheStrategy {
                 return;
             }
             if (searchEntry.path && searchEntry.path.indexOf('*') >= 0) {
-                query.where('path').contains(searchEntry.path.replace(/\*/g, '%'));
+                let searchPath = searchEntry.path.startsWith('*') ? '' : '^' + searchEntry.path + '$';
+                query.$where = {
+                    path: {
+                        $regex: searchPath.replace(/\*/g, '%')
+                    }
+                }
                 delete searchEntry.path;
             }
             Object.keys(searchEntry).forEach((key) => {
