@@ -1,7 +1,7 @@
 import { Guid, TraceUtils } from '@themost/common';
 import MD5 from 'crypto-js/md5';
 import { DataCacheReaderWriter, DataCacheStrategy } from '@themost/cache';
-import { QueryEntity, QueryExpression, QueryField } from '@themost/query';
+import { QueryEntity, QueryExpression } from '@themost/query';
 import genericPool from '@themost/pool';
 import { createInstance } from '@themost/sqlite';
 import path from 'path';
@@ -241,6 +241,35 @@ class LocalCacheStrategy extends DataCacheStrategy {
                 entry = null;
             }
             return this.reader.read(entry);
+        } finally {
+            await context.finalizeAsync();
+        }
+    }
+
+    /**
+     * Checks if a key exists in cache
+     * @param {string|import('@themost/cache').CompositeCacheKey} keyOrCompositeKey - The key to be checked
+     * @returns 
+     */
+    async has(keyOrCompositeKey) {
+        const context = new LocalCacheContext(this);
+        const CacheEntry = new QueryEntity('CacheEntry');
+        try {
+            await this.tryInitializeAsync(context);
+            const id = this.generateIdentifier(keyOrCompositeKey);
+            const query = new QueryExpression().select(({
+                id, path, headers, doomed, contentEncoding, location, params, customParams, entityTag,
+                createdAt, modifiedAt, duration, expiredAt
+            }) => {
+                return {
+                    id, path, headers, doomed, contentEncoding, location, params, customParams, entityTag,
+                    createdAt, modifiedAt, duration, expiredAt
+                }
+            }).from(CacheEntry).where((x, id) => {
+                return x.id == id;
+            }, id);
+            const [entry] = await context.executeAsync(query);
+            return entry;
         } finally {
             await context.finalizeAsync();
         }

@@ -1,8 +1,7 @@
 import { ConfigurationBase, TraceUtils } from '@themost/common';
 import { DataCacheStrategy } from '@themost/cache';
-import { MD5 } from 'crypto-js';
+import MD5 from 'crypto-js/md5';
 import { IndexedCacheStrategy } from './IndexedCacheStrategy';
-import { CacheEntry } from './models';
 import url from 'url';
 
 function sortAscending(a, b) {
@@ -240,7 +239,7 @@ class OutputCaching {
                                 createdAt: new Date(),
                                 modifiedAt: new Date()
                             });
-                            req.outputCache.entityTag = CacheEntry.inferEntityTag(req.outputCache);
+                            req.outputCache.entityTag = req.cache.inferEntityTag(req.outputCache);
                         }    
                         // send not modified
                         res.set('ETag',  req.outputCache.entityTag);

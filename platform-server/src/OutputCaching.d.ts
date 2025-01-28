@@ -18,6 +18,7 @@ export declare interface OutputCacheConfiguration {
 }
 
 export declare class OutputCaching {
+    readonly cache: DataCacheStrategy;
     static setup(config: OutputCacheConfiguration): Handler;
     static setup(service: DataCacheStrategy): Handler;
     static cache(options?: any): Handler;

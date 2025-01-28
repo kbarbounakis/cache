@@ -156,6 +156,24 @@ class DataCacheStrategy extends ConfigurationStrategy {
         return Guid.from(key).toString();
     }
 
+    /**
+     * 
+     * @param {import('./DataCacheStrategy').CacheItem} entry
+     * @returns {string}
+     */
+    generateEntityTag(entry) {
+        return `W/"${MD5(JSON.stringify({
+                    path: entry.path,
+                    location: entry.location,
+                    contentEncoding: entry.contentEncoding,
+                    headers: entry.headers,
+                    params: entry.params,
+                    customParams: entry.customParams,
+                    duration: entry.duration,
+                    doomed: entry.doomed
+                })).toString()}"`
+    }
+
 }
 
 export {

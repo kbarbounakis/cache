@@ -32,6 +32,7 @@ export declare abstract class DataCacheStrategy extends ConfigurationStrategy im
     abstract has(key: string | CompositeCacheKey): Promise<CompositeCacheKey>;
     getOrDefault(key: string | CompositeCacheKey, getFunc: GetItemFunction, absoluteExpiration?: number): Promise<any>;
     generateIdentifier(key: string|CompositeCacheKey): string;
+    generateEntityTag(entry: CacheItem): string;
 
 }
 
