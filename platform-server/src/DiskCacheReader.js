@@ -95,7 +95,11 @@ class DiskCacheReader extends DataCacheReaderWriter {
         const filePath = path.resolve(finalFileDir, fileName);
         // and write file
         // noinspection JSCheckFunctionSignatures
-        await writeFileAsync(filePath, content, 'binary');
+        if (content instanceof Buffer) {
+            await writeFileAsync(filePath, content, 'binary');
+        } else {
+            await writeFileAsync(filePath, Buffer.from(JSON.stringify(content)), 'binary');
+        }
     }
 
 
