@@ -237,10 +237,12 @@ class LocalCacheStrategy extends DataCacheStrategy {
                         return x.id === id;
                     }, id)
                 );
-                this.reader.unlink(entry);
+                await this.reader.unlink(entry);
                 entry = null;
             }
-            return this.reader.read(entry);
+            if (entry) {
+                return this.reader.read(entry);
+            }
         } finally {
             await context.finalizeAsync();
         }

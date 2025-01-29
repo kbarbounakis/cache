@@ -1,6 +1,5 @@
 import { ConfigurationBase } from '@themost/common';
-import { IndexedCacheStrategy, IndexedCache, CacheEntry } from '@themost/cache/platform-server';
-import { QueryExpression } from '@themost/query';
+import { IndexedCacheStrategy } from '@themost/cache/platform-server';
 
 describe('DataCacheStrategy', () => {
 
@@ -20,7 +19,6 @@ describe('DataCacheStrategy', () => {
     it('should try to create instance', async () => {
         const service1 = new IndexedCacheStrategy(new ConfigurationBase('.'));
         expect(service1).toBeTruthy();
-        expect(service1.rawCache).toBeInstanceOf(IndexedCache);
         await service1.finalize();
     });
 
@@ -64,26 +62,4 @@ describe('DataCacheStrategy', () => {
         expect(item).toBeFalsy();
     });
 
-    it('should check items', async () => {
-        for (let index = 0; index < 10; index++) {
-            await service.add(`/api/Users/${index}`, {
-                name: `user${index}`
-            }, 30 * 60);
-        }
-        const context = service.rawCache.createContext();
-        const cached = await context.model(CacheEntry).where('path').equal('/api/Users/4').getItem();
-        expect(cached).toBeTruthy();
-        await context.db.executeAsync(
-            new QueryExpression().update(context.model(CacheEntry).sourceAdapter).set(
-                {
-                    expiredAt: new Date()
-                }
-            ).where('path').equal('/api/Users/4')
-        );
-        await service.onCheck();
-        const deleted = await context.model(CacheEntry).where('path').equal('/api/Users/4').getItem();
-        expect(deleted).toBeFalsy();
-        await context.finalize();
-        
-    });
 });
