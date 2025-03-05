@@ -24,7 +24,7 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @returns {Promise<any>}
      */
     get(key) {
-        var self = this;
+        const self = this;
         return new Promise(function(resolve, reject) {
             try {
                 void self.rawCache.get(key, function(err, res) {
@@ -51,7 +51,7 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @returns {Promise<void>}
      */
     async add(key, value, absoluteExpiration) {
-        var self = this;
+        const self = this;
         return new Promise(function(resolve, reject) {
             try {
                 void self.rawCache.set(key, value, absoluteExpiration, (err) => {
@@ -115,7 +115,7 @@ class DefaultDataCacheStrategy extends DataCacheStrategy {
      * @returns {Promise<void>}
      */
     finalize() {
-        var self = this;
+        const self = this;
         return self.clear().then(function() {
             if (self.rawCache.checkTimeout != null) {
                 clearTimeout(self.rawCache.checkTimeout);

@@ -190,7 +190,7 @@ class OutputCaching {
                     return req.cache.add(req.outputCache, null).then(() => {
                         // set entityTag again
                         res.set('ETag',  req.outputCache.entityTag);
-                        res.set('Date', req.outputCache.createdAt.toUTCString());
+                        res.set('Date', req.outputCache.createdAt ? req.outputCache.createdAt.toUTCString() : new Date().toUTCString());
                         return next();
                     }).catch((err) => {
                         return next(err);

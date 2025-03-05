@@ -12,7 +12,7 @@ const CACHE_ABSOLUTE_EXPIRATION = 1200;
 
 if (typeof Guid.from !== 'function') {
     Guid.from = function(value) {
-        var str = MD5(value).toString();
+        const str = MD5(value).toString();
         return new Guid([
             str.substring(0, 8),
             str.substring(8, 12),
@@ -216,14 +216,15 @@ class LocalCacheStrategy extends DataCacheStrategy {
         try {
             await this.tryInitializeAsync(context);
             const id = this.generateIdentifier(key);
-            const query = new QueryExpression().select(({id, content, contentEncoding, doomed, duration, expiredAt}) => {
+            const query = new QueryExpression().select(({id, content, contentEncoding, doomed, duration, expiredAt, entityTag}) => {
                 return {
                     id,
                     content,
                     contentEncoding,
                     doomed,
                     duration,
-                    expiredAt
+                    expiredAt,
+                    entityTag
                 }
             }).from(CacheEntry).where((x, id) => {
                 return x.id == id;
@@ -301,6 +302,8 @@ class LocalCacheStrategy extends DataCacheStrategy {
                 expiredAt: absoluteExpiration ? new Date(Date.now() + ((absoluteExpiration || 0) * 1000)) : null,
                 doomed: false
             });
+            // generate entity tag
+            entry.entityTag = this.generateEntityTag(entry);
             let [existing] = await context.executeAsync(
                 new QueryExpression().select(({id, doomed, expiredAt}) => {
                     return {
